@@ -32,6 +32,7 @@ class GniMatcher
     @tm = Taxamatch::Base.new
     @semantics = get_semantics
     @cache_strings_match = {}
+    @cache_species_match = {}
   end
 
   def match_genera(genus1, genus1_id)
@@ -43,7 +44,7 @@ class GniMatcher
       result[genus2_id.to_s] = {normalized: genus2, match: match} if match[:match]
     end
     
-    @db.query "update genus_words set matched_ids = '%s' where id = %s" % [Mysql.escape_string(result.to_json), genus1_id]
+    @db.query "update genus_words set matched_data = '%s' where id = %s" % [Mysql.escape_string(result.to_json), genus1_id]
     result
   end
 
@@ -51,8 +52,8 @@ class GniMatcher
     genera_ids = genera_match.keys.join(",")
     return if genera_ids == ''
     canonical_ids = []
-    get_species(genera_ids, species1, canonical1_id).each do |canonical2_id, genus2_id, species2|
-      species_match = @tm.match_species(tm_prepare(species1), tm_prepare(species2))
+    get_species(genera_ids, species1, canonical1_id).each do |canonical2_id, genus2_id, species2| 
+      species_match = match_species(species1, species2)
       if species_match['match']
         genus_match = genera_match[genus2_id.to_s]['match']
         binomial_match = @tm.match_matches(genus_match, species_match)
@@ -89,6 +90,13 @@ class GniMatcher
   end
 
   protected
+  def match_species(species1, species2)
+    species_key = [species1, species2].sort.join("|")
+    return @cache_species_match[ species_key ] if @cache_species_match[ species_key ]
+    match = @tm.match_species(tm_prepare(species1), tm_prepare(species2))
+    @cache_species_match[ species_key ] = match
+    match
+  end
 
   def get_species(genera_ids, species1, canonical1_id)
     length = length_min_max species1
