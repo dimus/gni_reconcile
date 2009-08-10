@@ -1,15 +1,41 @@
 #!/usr/bin/env ruby1.9
 # encoding: UTF-8
-
 require 'starling'
 require 'gni_matcher'
+require 'optparse'
 
-s = Starling.new(ARGV[0])
-db = Database.instance.cursor
+OPTIONS = {
+  :que_host => nil,
+  :letter => nil
+}
 
-while 1
-  letter = s.get('r_cue')
+ARGV.options do |opts|
+  script_name = File.basename($0)
+  opts.banner = "Usage: ruby #{script_name} [options]"
 
+  opts.separator ""
+
+  opts.on("-h", "--host", String,
+          "Host of a starling daemon",
+          "Default: nil") { |opt| OPTIONS[:que_host] = opt }
+  
+  opts.separator ""
+
+  opts.on("-l", "--letter", String,
+          "Letter to process",
+          "Default: nil") { |opt| OPTIONS[:letter] = opt }
+
+  opts.separator ""
+
+  opts.on("-h", "--help",
+          "Show this help mesage.") { puts opts; exit }
+
+  opts.parse!
+end
+
+
+
+def reconcile(letter, db)
   data_file = "results/" + letter + ".txt"
   f = open(data_file, 'w')
   gm = GniMatcher.new
@@ -29,6 +55,7 @@ while 1
       genus_match = genus_match ? JSON.load(genus_match) : gm.match_genera(genus, genus_id)
       canonical_ids = gm.match_names(species, genus_match, canonical_id)
       name_strings1, name_strings2 = gm.get_name_strings(canonical_id, canonical_ids)
+      puts name_strings1.num_rows
       matchers = gm.match_name_strings(name_strings1, name_strings2)
       matchers.each do |name1, name2|
         f.write "    %s\n    %s\n\n" % [name1, name2]
@@ -39,5 +66,22 @@ while 1
   end
 
   f.close
+end
+
+if $0 == __FILE__
+
+  letter = OPTIONS[:letter] || 'q'
+  host = OPTIONS[:que_host]
+  db = Database.instance.cursor
+
+  if host
+    s = Starling.new(host)
+    while 1
+      letter = s.get('r_que')
+      reconcile(letter, db)
+    end
+  else
+    reconcile(letter, db)
+  end
 
 end

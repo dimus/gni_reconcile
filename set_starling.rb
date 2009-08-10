@@ -2,8 +2,8 @@
 
 require 'starling'
 
-s = Starling.new('10.19.19.58:22122')
+s = Starling.new(ARGV[0])
 
 ('a'..'z').to_a.reverse.each do |letter|
-  s.set('r_cue', letter)
+  s.set('r_que', letter)
 end
