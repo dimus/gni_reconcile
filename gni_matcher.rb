@@ -38,10 +38,9 @@ class GniMatcher
   def match_genera(genus1, genus1_id)
     result = {}
     genera = get_genera(genus1)
-    
     genera.each do |genus2_id, genus2|
       match = @tm.match_genera(tm_prepare(genus1), tm_prepare(genus2))
-      result[genus2_id.to_s] = {normalized: genus2, match: match} if match[:match]
+      result[genus2_id.to_s] = {'normalized' => genus2, 'match' => match} if match['match']
     end
     
     @db.query "update genus_words set matched_data = '%s' where id = %s" % [Mysql.escape_string(result.to_json), genus1_id]
@@ -57,7 +56,7 @@ class GniMatcher
       if species_match['match']
         genus_match = genera_match[genus2_id.to_s]['match']
         binomial_match = @tm.match_matches(genus_match, species_match)
-        canonical_ids << canonical2_id if binomial_match['match']
+        canonical_ids << canonical2_id if binomial_match['match']  
       end
     end
     canonical_ids
@@ -87,12 +86,12 @@ class GniMatcher
       names2.each do |id2, name2|
         unless id1 == id2 || @cache_strings_match[ "%s|%s" % [id1,id2] ] 
           name2 = name2.force_encoding('utf-8')
-          match = @tm.taxamatch(name1, name2)
-          @cache_strings_match[ "%s|%s" % [id1, id2] ] = match
-          @cache_strings_match[ "%s|%s" % [id2, id1] ] = match
-          if match 
-            matchers << [name1, name2]
-            matchers << [name2, name1]
+          match = @tm.taxamatch(name1, name2, false)
+          @cache_strings_match[ "%s|%s" % [id1, id2] ] = 0 
+          @cache_strings_match[ "%s|%s" % [id2, id1] ] = 0
+          if match && match['match'] 
+            matchers << [name1, name2, match['edit_distance']]
+            matchers << [name2, name1, match['edit_distance']]
           end
         end
       end

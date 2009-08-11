@@ -14,13 +14,13 @@ ARGV.options do |opts|
 
   opts.separator ""
 
-  opts.on("-h", "--host", String,
+  opts.on("-h", "--host=host", String,
           "Host of a starling daemon",
           "Default: nil") { |opt| OPTIONS[:que_host] = opt }
   
   opts.separator ""
 
-  opts.on("-l", "--letter", String,
+  opts.on("-l", "--letter=letter", String,
           "Letter to process",
           "Default: nil") { |opt| OPTIONS[:letter] = opt }
 
@@ -39,7 +39,7 @@ def reconcile(letter, db)
   f = open(data_file, 'w')
   gm = GniMatcher.new
 
-  res = db.query("SELECT id, word1, word2 FROM extended_canonical_forms WHERE number_of_words=2 and word1 like '%s%%' order by word1, word2" % letter)
+  res = db.query("SELECT id, word1, word2 FROM extended_canonical_forms WHERE number_of_words=2 and word1 like '%s%%' order by word1, word2 limit 100" % letter)
 
   puts "%s letter rows to process: %s" % [letter,res.num_rows]
 
@@ -55,8 +55,8 @@ def reconcile(letter, db)
       canonical_ids = gm.match_names(species, genus_match, canonical_id)
       name_strings1, name_strings2 = gm.get_name_strings(canonical_id, canonical_ids)
       matchers = gm.match_name_strings(name_strings1, name_strings2)
-      matchers.each do |name1, name2|
-        f.write "    %s\n    %s\n\n" % [name1, name2]
+      matchers.each do |name1, name2, edit_distance|
+        f.write "    %s\n    %s\n    ed.dist: %s\n\n" % [name1, name2,edit_distance]
       end
     else
       f.write "Did not find %s in genus_word table\n\n" % genus
