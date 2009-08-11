@@ -39,7 +39,7 @@ def reconcile(letter, db)
   f = open(data_file, 'w')
   gm = GniMatcher.new
 
-  res = db.query("SELECT id, word1, word2 FROM extended_canonical_forms WHERE number_of_words=2 and word1 like '%s%%' order by word1, word2 limit 100" % letter)
+  res = db.query("SELECT id, word1, word2 FROM extended_canonical_forms WHERE number_of_words=2 and word1 like '%s%%' order by word1, word2" % letter)
 
   puts "%s letter rows to process: %s" % [letter,res.num_rows]
 
