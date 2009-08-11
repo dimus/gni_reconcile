@@ -1,6 +1,5 @@
 #!/usr/bin/env ruby1.9
 # encoding: UTF-8
-require 'starling'
 require 'gni_matcher'
 require 'optparse'
 
@@ -55,7 +54,6 @@ def reconcile(letter, db)
       genus_match = genus_match ? JSON.load(genus_match) : gm.match_genera(genus, genus_id)
       canonical_ids = gm.match_names(species, genus_match, canonical_id)
       name_strings1, name_strings2 = gm.get_name_strings(canonical_id, canonical_ids)
-      puts name_strings1.num_rows
       matchers = gm.match_name_strings(name_strings1, name_strings2)
       matchers.each do |name1, name2|
         f.write "    %s\n    %s\n\n" % [name1, name2]
@@ -64,7 +62,6 @@ def reconcile(letter, db)
       f.write "Did not find %s in genus_word table\n\n" % genus
     end
   end
-
   f.close
 end
 
@@ -73,8 +70,8 @@ if $0 == __FILE__
   letter = OPTIONS[:letter] || 'q'
   host = OPTIONS[:que_host]
   db = Database.instance.cursor
-
   if host
+    require 'starling'
     s = Starling.new(host)
     while 1
       letter = s.get('r_que')

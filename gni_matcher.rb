@@ -72,17 +72,28 @@ class GniMatcher
 
   def match_name_strings(name1_strings, name2_strings)
     matchers = []
-    name1_strings.each do |id1, name1|
+    names1 = []
+    names2 = []
+    name1_strings.each do |id, name|
+      names1 << [id, name]
+    end
+
+    name2_strings.each do |id, name|
+      names2 << [id, name]
+    end
+
+    names1.each do |id1, name1|
       name1 = name1.force_encoding('utf-8')
-      name2_strings.each do |id2, name2|
-        next if  id1 == id2 || @cache_strings_match[ "%s|%s" % [id1,id2] ] 
-        name2 = name2.force_encoding('utf-8')
-        match = @tm.taxamatch(name1, name2)
-        @cache_strings_match[ "%s|%s" % [id1, id2] ] = match
-        @cache_strings_match[ "%s|%s" % [id2, id1] ] = match
-        if match 
-          matchers << [name1, name2]
-          matchers << [name2, name1]
+      names2.each do |id2, name2|
+        unless id1 == id2 || @cache_strings_match[ "%s|%s" % [id1,id2] ] 
+          name2 = name2.force_encoding('utf-8')
+          match = @tm.taxamatch(name1, name2)
+          @cache_strings_match[ "%s|%s" % [id1, id2] ] = match
+          @cache_strings_match[ "%s|%s" % [id2, id1] ] = match
+          if match 
+            matchers << [name1, name2]
+            matchers << [name2, name1]
+          end
         end
       end
     end
