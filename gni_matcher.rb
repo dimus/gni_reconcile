@@ -48,6 +48,7 @@ class GniMatcher
   end
 
   def match_names(species1, genera_match, canonical1_id)
+    puts '----%s' % genera_match.keys.size
     genera_ids = genera_match.keys.join(",")
     return if genera_ids == ''
     canonical_ids = []
