@@ -33,6 +33,7 @@ class GniMatcher
     @semantics = get_semantics
     @cache_strings_match = {}
     @cache_species_match = {}
+    @cache_parsed = {}
   end
 
   def match_genera(genus1, genus1_id)
@@ -48,59 +49,80 @@ class GniMatcher
   end
 
   def match_names(species1, genera_match, canonical1_id)
-    puts '----%s' % genera_match.keys.size
     genera_ids = genera_match.keys.join(",")
-    return if genera_ids == ''
+    return [] if genera_ids == ''
     canonical_ids = []
     get_species(genera_ids, species1, canonical1_id).each do |canonical2_id, genus2_id, species2| 
       species_match = match_species(species1, species2)
       if species_match['match']
         genus_match = genera_match[genus2_id.to_s]['match']
         binomial_match = @tm.match_matches(genus_match, species_match)
-        canonical_ids << canonical2_id if binomial_match['match']  
+        canonical_ids << [canonical2_id, binomial_match['edit_distance']] if binomial_match['match']  
       end
     end
     canonical_ids
   end
-
-  def get_name_strings(canonical1_id, canonical_ids)
-    canonical_ids << canonical1_id rescue canonical_ids = [canonical1_id]
-    matchers = @db.query "select id, name from name_strings where canonical_form_id = %s" % canonical1_id
-    to_match = @db.query "select id, name from name_strings where canonical_form_id in (%s)" % canonical_ids.join(",")
-    [matchers, to_match]
+  
+  def match_name_strings(canonical1, canonicals)
+    names1 = get_names(canonical1)
+    matchers = compare_authors(names1, names1, 0)
+    canonicals.each do |canonical, edit_distance|
+      names2 = get_names(canonical)
+      matchers += compare_authors(names1, names2, edit_distance)
+    end
+    matchers
   end
 
-  def match_name_strings(name1_strings, name2_strings)
+  protected
+  
+  def get_authors(id)
+    if @cache_parsed[id]
+      preparsed = @cache_parsed[id]
+    else
+      years = @db.query "select nnw.normalized from normalized_name_words nnw join name_word_semantics nws on nnw.id = nws.name_word_id where nws.name_string_id = %s and semantic_meaning_id = %s" % [id, @semantics['year']]
+      authors = @db.query "select nnw.normalized from normalized_name_words nnw join name_word_semantics nws on nnw.id = nws.name_word_id where nws.name_string_id = %s and semantic_meaning_id = %s" % [id, @semantics['author_word']]
+      all_years = []
+      years.each do |year|
+        all_years << year[0] if year[0].to_i > 1700 
+      end
+      all_authors = []
+      authors.each do |auth|
+        all_authors << auth
+      end
+      preparsed = {all_authors: all_authors, all_years: all_years} 
+      @cache_parsed[id] = preparsed
+    end
+    preparsed
+  end
+  
+  def compare_authors(names1, names2, edit_distance) 
     matchers = []
-    names1 = []
-    names2 = []
-    name1_strings.each do |id, name|
-      names1 << [id, name]
-    end
-
-    name2_strings.each do |id, name|
-      names2 << [id, name]
-    end
-
     names1.each do |id1, name1|
-      name1 = name1.force_encoding('utf-8')
+      auth1 = get_authors(id1)
       names2.each do |id2, name2|
         unless id1 == id2 || @cache_strings_match[ "%s|%s" % [id1,id2] ] 
-          name2 = name2.force_encoding('utf-8')
-          match = @tm.taxamatch(name1, name2, false)
-          @cache_strings_match[ "%s|%s" % [id1, id2] ] = 0 
-          @cache_strings_match[ "%s|%s" % [id2, id1] ] = 0
-          if match && match['match'] 
-            matchers << [name1, name2, match['edit_distance']]
-            matchers << [name2, name1, match['edit_distance']]
+          auth2 = get_authors(id2)
+          match = @tm.match_authors(auth1, auth2)
+          @cache_strings_match[ "%s|%s" % [id1, id2] ] = match
+          @cache_strings_match[ "%s|%s" % [id2, id1] ] = match
+          if match
+            matchers << [name1, name2, edit_distance]
+            matchers << [name2, name1, edit_distance]
           end
         end
       end
     end
-    matchers 
+    matchers
+  end
+  
+  def get_names(canonical_id)
+    names = []
+    @db.query("select id, name from name_strings where canonical_form_id = %s" % canonical_id).each do |id, name|
+      names << [id, name]
+    end
+    names
   end
 
-  protected
   def match_species(species1, species2)
     species_key = [species1, species2].sort.join("|")
     return @cache_species_match[ species_key ] if @cache_species_match[ species_key ]
