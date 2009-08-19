@@ -79,8 +79,8 @@ class GniMatcher
     if @cache_parsed[id]
       preparsed = @cache_parsed[id]
     else
-      years = @db.query "select nnw.normalized from normalized_name_words nnw join name_word_semantics nws on nnw.id = nws.name_word_id where nws.name_string_id = %s and semantic_meaning_id = %s" % [id, @semantics['year']]
-      authors = @db.query "select nnw.normalized from normalized_name_words nnw join name_word_semantics nws on nnw.id = nws.name_word_id where nws.name_string_id = %s and semantic_meaning_id = %s" % [id, @semantics['author_word']]
+      years = @db.query "select nw.word from name_words nw join name_word_semantics nws on nw.id = nws.name_word_id where nws.name_string_id = %s and semantic_meaning_id = %s" % [id, @semantics['year']]
+      authors = @db.query "select nw.word from name_words nw join name_word_semantics nws on nw.id = nws.name_word_id where nws.name_string_id = %s and semantic_meaning_id = %s" % [id, @semantics['author_word']]
       all_years = []
       years.each do |year|
         all_years << year[0] if year[0].to_i > 1700 
@@ -103,11 +103,11 @@ class GniMatcher
         unless id1 == id2 || @cache_strings_match[ "%s|%s" % [id1,id2] ] 
           auth2 = get_authors(id2)
           match = @tm.match_authors(auth1, auth2)
-          @cache_strings_match[ "%s|%s" % [id1, id2] ] = match
-          @cache_strings_match[ "%s|%s" % [id2, id1] ] = match
-          if match
-            matchers << [name1, name2, edit_distance]
-            matchers << [name2, name1, edit_distance]
+          @cache_strings_match[ "%s|%s" % [id1, id2] ] = 1
+          @cache_strings_match[ "%s|%s" % [id2, id1] ] = 1
+          if match && match > 50
+            matchers << [name1, name2, edit_distance, match]
+            matchers << [name2, name1, edit_distance, match]
           end
         end
       end

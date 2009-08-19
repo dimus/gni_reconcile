@@ -5,7 +5,7 @@ require 'gni_matcher'
 
 db = Database.instance.cursor
 
-['uninomial', 'genus', 'species', 'infraspecies'].each do |t|
+['genus', 'species', 'infraspecies'].each do |t|
 
   puts "working on #{t}"
 
@@ -23,12 +23,12 @@ db = Database.instance.cursor
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8"
   
   db.query "insert into #{t}_words 
-    select distinct nw.id, normalized, normalized_first_letter, normalized_length, null 
+    select distinct nw.id, nw.word, nw.first_letter, nw.length, null 
       from name_word_semantics nws 
         join name_words nw on nw.id=nws.name_word_id 
         join semantic_meanings sm on sm.id = nws.semantic_meaning_id 
-        join normalized_name_words nnw on nw.id = nnw.name_word_id 
       where sm.name='#{t}' 
       order by normalized"
-
 end
+
+
