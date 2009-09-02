@@ -55,9 +55,11 @@ def reconcile(letter, db)
       genus_match = genus_match ? JSON.load(genus_match) : gm.match_genera(genus, genus_id)
       canonical_ids = gm.match_names(species, genus_match, canonical_id)
       matchers = gm.match_name_strings(canonical_id, canonical_ids)
-      matchers.each do |name1, name2, edit_distance, auth_score|
+      matchers.each do |id1, id2, name1, name2, edit_distance, auth_score|
         distance_score = (1 - edit_distance.to_f/((name1.size + name2.size)/2.0)) * 100
         f.write "%s\t%s\t%s\t%s\t%s\n\n" % [edit_distance, auth_score, distance_score, name1, name2]
+        query = "insert into taxamatchers (name_string_id1, name_string_id2, edit_distance, taxamatch_score, author_score, matched, algorithmic, created_at, updated_at) values (%s, %s, %s, '%s', %s, 1, 1, now(), now())" % [id1, id2, edit_distance, distance_score, auth_score]
+        db.query(query)
       end
     else
       f.write "Did not find %s in genus_word table\n\n" % genus
@@ -72,7 +74,22 @@ if $0 == __FILE__
   letter = OPTIONS[ :letter ] || 'q'
   host = OPTIONS[ :que_host ]
   db = Database.instance.cursor
-  
+
+  db.query "drop table if exists taxamatchers"
+  db.query "CREATE TABLE `taxamatchers` (
+  `id` int(11) NOT NULL auto_increment,
+  `name_string_id1` int(11) default NULL,
+  `name_string_id2` int(11) default NULL,
+  `edit_distance` int(11) default NULL,
+  `taxamatch_score` float default NULL,
+  `author_score` int(11) default NULL,
+  `matched` tinyint(1) default NULL,
+  `algorithmic` tinyint(1) default NULL,
+  `created_at` datetime default NULL,
+  `updated_at` datetime default NULL,
+  PRIMARY KEY  (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8"
+
   if host
     require 'starling'
     s = Starling.new( host )

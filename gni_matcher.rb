@@ -106,8 +106,8 @@ class GniMatcher
           @cache_strings_match[ "%s|%s" % [id1, id2] ] = 1
           @cache_strings_match[ "%s|%s" % [id2, id1] ] = 1
           if match && match > 50
-            matchers << [name1, name2, edit_distance, match]
-            matchers << [name2, name1, edit_distance, match]
+            matchers << [id1, id2, name1, name2, edit_distance, match]
+            matchers << [id2, id1, name2, name1, edit_distance, match]
           end
         end
       end
