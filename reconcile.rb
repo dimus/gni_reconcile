@@ -56,7 +56,7 @@ def reconcile(letter, db)
       canonical_ids = gm.match_names(species, genus_match, canonical_id)
       matchers = gm.match_name_strings(canonical_id, canonical_ids)
       matchers.each do |name1, name2, edit_distance, auth_score|
-        distance_score = (1 - edit_distance/((name1.size + name2.size)/2)) * 100
+        distance_score = (1 - edit_distance.to_f/((name1.size + name2.size)/2.0)) * 100
         f.write "%s\t%s\t%s\t%s\t%s\n\n" % [edit_distance, auth_score, distance_score, name1, name2]
       end
     else

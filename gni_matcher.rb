@@ -100,9 +100,9 @@ class GniMatcher
     names1.each do |id1, name1|
       auth1 = get_authors(id1)
       names2.each do |id2, name2|
-        unless id1 == id2 || @cache_strings_match[ "%s|%s" % [id1,id2] ] 
+        unless id1 == id2 || @cache_strings_match[ "%s|%s" % [id1,id2] ] || auth1[:all_authors].size == 0
           auth2 = get_authors(id2)
-          match = @tm.match_authors(auth1, auth2)
+          match = auth2[:all_authors].size > 0 ? @tm.match_authors(auth1, auth2) : 0
           @cache_strings_match[ "%s|%s" % [id1, id2] ] = 1
           @cache_strings_match[ "%s|%s" % [id2, id1] ] = 1
           if match && match > 50
@@ -117,7 +117,7 @@ class GniMatcher
   
   def get_names(canonical_id)
     names = []
-    @db.query("select id, name from name_strings where canonical_form_id = %s" % canonical_id).each do |id, name|
+    @db.query("select ns.id, ns.name from name_strings ns join extended_canonical_forms ecf on ecf.id = ns.canonical_form_id where canonical_form_id = %s and ns.is_canonical_form = 0" % canonical_id).each do |id, name|
       names << [id, name]
     end
     names

@@ -2,4 +2,5 @@
 *swo
 config.yml
 results/*.txt
+results_old
 nohup.out
