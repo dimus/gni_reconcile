@@ -87,6 +87,10 @@ class TaxaGroup
     end
     @db.query "commit"
   end
+
+  def groups_cleanup
+    @db.query "delete l from lexical_groups_tmp l left join lexical_group_name_strings_tmp ln on l.id = ln.lexical_group_id where ln.id is null"
+  end
  
  protected
 
@@ -108,4 +112,5 @@ if $0 == __FILE__
   t.set_tables
   t.create_canonical_groups
   t.create_taxamatch_groups
+  t.groups_cleanup
 end

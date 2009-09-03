@@ -1,5 +1,10 @@
 ---
-  host: host
-  user: user
-  password: password
-  database: database
+  host: host1
+  user: user1
+  password: passw1
+  database: db1
+  shared_host: host2
+  shared_user: user2
+  shared_password: passw2
+  shared_database: db2
+  starling_host: host3:22122

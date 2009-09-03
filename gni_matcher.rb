@@ -12,17 +12,33 @@ require 'json'
 
 class Database
   include Singleton
+  TMQUE = 'tm_que'
+  TMERR = 'tm_err_que'
+  BATCH_SIZE = 200
   
   def initialize
     config = YAML.load(open('config.yml'))
     @db = Mysql.init
     @db.options(Mysql::SET_CHARSET_NAME, 'utf8')
     @db.real_connect(config['host'], config['user'], config['password'], config['database'])
-    @db.query("set names utf8")
+    @db.query("set character set utf8")
+    @db_shared = Mysql.init
+    @db_shared.options(Mysql::SET_CHARSET_NAME, 'utf8')
+    @db_shared.real_connect(config['shared_host'], config['shared_user'], config['shared_password'], config['shared_database'])
+    @db_shared.query("set character set utf8")
+    @starling_host = config['starling_host']
   end
 
   def cursor
     return @db
+  end
+  
+  def shared_cursor
+    return @db_shared
+  end
+  
+  def starling_host
+    @starling_host
   end
 end
 

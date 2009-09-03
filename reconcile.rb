@@ -2,11 +2,10 @@
 # encoding: UTF-8
 require 'gni_matcher'
 require 'optparse'
-TMQUE = 'tm_que'
-TMERR = 'tm_err_que'
+
 OPTIONS = {
-  :que_host => nil,
-  :letter => nil
+  :cluster => false,
+  :limit => nil
 }
 
 ARGV.options do |opts|
@@ -15,15 +14,15 @@ ARGV.options do |opts|
 
   opts.separator ""
 
-  opts.on("-h", "--host=host", String,
-          "Host of a starling daemon",
-          "Default: nil") { |opt| OPTIONS[:que_host] = opt }
+  opts.on("-c", "--cluster", String,
+          "run in a cluster mode",
+          "Default: false") { |opt| OPTIONS[:cluster] = true }
   
   opts.separator ""
 
-  opts.on("-l", "--letter=letter", String,
+  opts.on("-l", "--limit=limit", String,
           "Letter to process",
-          "Default: nil") { |opt| OPTIONS[:letter] = opt }
+          "Default: nil") { |opt| OPTIONS[:limit] = opt }
 
   opts.separator ""
 
@@ -35,19 +34,19 @@ end
 
 
 
-def reconcile(letter, db)
-  data_file = "results/" + letter + ".txt"
+def reconcile(limit, db, db_shared)
+  data_file = "results/#{limit.to_s}_of#{Database::BATCH_SIZE}.txt"
   f = open(data_file, 'w')
   gm = GniMatcher.new
 
-  res = db.query("SELECT id, word1, word2 FROM extended_canonical_forms WHERE number_of_words=2 and word1 like '%s%%' order by word1, word2" % letter)
+  res = db.query("SELECT id, word1, word2 FROM extended_canonical_forms WHERE number_of_words=2 order by word1, word2 limit %s, %s" % [limit, Database::BATCH_SIZE])
 
-  puts "%s letter rows to process: %s" % [letter,res.num_rows]
+  puts "%s limit rows to process: %s" % [limit,res.num_rows]
 
   count = 0
   res.each do |canonical_id, genus, species|
     count += 1
-    print "%s: %s " % [letter,count] if count % 100 == 0
+    print "%s: %s " % [limit,count] if count % 100 == 0
     next if genus == '' || genus == nil
     f.write "#Canonical: %s %s\n" % [genus, species]
     genus_id, genus_match = db.query("select id, matched_data from genus_words where normalized = '%s'" % genus).fetch_row
@@ -59,53 +58,43 @@ def reconcile(letter, db)
         distance_score = (1 - edit_distance.to_f/((name1.size + name2.size)/2.0)) * 100
         f.write "%s\t%s\t%s\t%s\t%s\n\n" % [edit_distance, auth_score, distance_score, name1, name2]
         query = "insert into taxamatchers (name_string_id1, name_string_id2, edit_distance, taxamatch_score, author_score, matched, algorithmic, created_at, updated_at) values (%s, %s, %s, '%s', %s, 1, 1, now(), now())" % [id1, id2, edit_distance, distance_score, auth_score]
-        db.query(query)
+        db_shared.query(query)
       end
     else
       f.write "Did not find %s in genus_word table\n\n" % genus
     end
   end
   f.close
+  db_shared.query("insert into taxamatch_statuses (finished_task) values ('%s')" % limit)
+  puts
 end
 
 
 if $0 == __FILE__
   
-  letter = OPTIONS[ :letter ] || 'q'
-  host = OPTIONS[ :que_host ]
-  db = Database.instance.cursor
+  limit = OPTIONS[ :limit ] || 0
+  cluster = OPTIONS[ :cluster ] || false
+  db_inst = Database.instance
+  db = db_inst.cursor
+  db_shared = db_inst.shared_cursor
 
-  db.query "drop table if exists taxamatchers"
-  db.query "CREATE TABLE `taxamatchers` (
-  `id` int(11) NOT NULL auto_increment,
-  `name_string_id1` int(11) default NULL,
-  `name_string_id2` int(11) default NULL,
-  `edit_distance` int(11) default NULL,
-  `taxamatch_score` float default NULL,
-  `author_score` int(11) default NULL,
-  `matched` tinyint(1) default NULL,
-  `algorithmic` tinyint(1) default NULL,
-  `created_at` datetime default NULL,
-  `updated_at` datetime default NULL,
-  PRIMARY KEY  (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8"
-
-  if host
+  if cluster
     require 'starling'
-    s = Starling.new( host )
+    puts 'starting reconciliation in cluster mode'
+    s = Starling.new( db_inst.starling_host )
     while 1
-      letter = s.get( TMQUE )
+      limit = s.get( Database::TMQUE )
       begin
-        s.sizeof( TMERR ).times { s.set( TMQUE, s.get( TMERR ) ) }
-        reconcile( letter, db )
+        s.sizeof( Database::TMERR ).times { s.set( Database::TMQUE, s.get( Database::TMERR ) ) }
+        reconcile( limit, db, db_shared )
       rescue Exception => e
         puts "#{ e } (#{ e.class })!"
-        puts "#{ letter } will be rescheduled"
-        s.set( TMERR, letter )
+        puts "#{ limit } will be rescheduled"
+        s.set( Database::TMERR, limit )
       end
     end
   else
-    reconcile( letter, db )
+    reconcile( limit, db, db_shared )
   end
 
 end
