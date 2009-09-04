@@ -14,7 +14,7 @@ class Database
   include Singleton
   TMQUE = 'tm_que'
   TMERR = 'tm_err_que'
-  BATCH_SIZE = 200
+  BATCH_SIZE = 10000
   
   def initialize
     config = YAML.load(open('config.yml'))
