@@ -84,8 +84,10 @@ if $0 == __FILE__
     s = Starling.new( db_inst.starling_host )
     while 1
       limit = s.get( Database::TMQUE )
+      limit_is_processed = db.query("select 1 from taxamatch_statuses where finished_task = %s" % limit)fetch_row
+      puts "skipping %s" %limit if limit_is_processed
+      next if limit_is_processed
       begin
-        s.sizeof( Database::TMERR ).times { s.set( Database::TMQUE, s.get( Database::TMERR ) ) }
         reconcile( limit, db, db_shared )
       rescue Exception => e
         puts "#{ e } (#{ e.class })!"

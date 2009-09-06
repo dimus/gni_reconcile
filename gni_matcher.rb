@@ -134,7 +134,7 @@ class GniMatcher
   def get_names(canonical_id)
     names = []
     @db.query("select ns.id, ns.name from name_strings ns join extended_canonical_forms ecf on ecf.id = ns.canonical_form_id where canonical_form_id = %s and ns.is_canonical_form = 0" % canonical_id).each do |id, name|
-      names << [id, name]
+      names << [id, name.force_encoding('utf-8')]
     end
     names
   end
