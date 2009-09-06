@@ -8,26 +8,28 @@ s.flush(Database::TMERR)
 db_shared = Database.instance.shared_cursor
 
 
-#db_shared.query "drop table if exists taxamatchers"
-#db_shared.query "drop table if exists taxamatch_statuses"
-#
-#db_shared.query "CREATE TABLE `taxamatchers` (
-#  `id` int(11) NOT NULL auto_increment,
-#  `name_string_id1` int(11) default NULL,
-#  `name_string_id2` int(11) default NULL,
-#  `edit_distance` int(11) default NULL,
-#  `taxamatch_score` float default NULL,
-#  `author_score` int(11) default NULL,
-#  `matched` tinyint(1) default NULL,
-#  `algorithmic` tinyint(1) default NULL,
-#  `created_at` datetime default NULL,
-#  `updated_at` datetime default NULL,
-#  PRIMARY KEY  (`id`)
-#) ENGINE=InnoDB DEFAULT CHARSET=utf8"
-#
-#db_shared.query "CREATE TABLE `taxamatch_statuses` (
-#  finished_task int
-#)"
+db_shared.query "drop table if exists taxamatchers"
+db_shared.query "drop table if exists taxamatch_statuses"
+
+db_shared.query "CREATE TABLE `taxamatchers` (
+  `id` int(11) NOT NULL auto_increment,
+  `name_string_id1` int(11) default NULL,
+  `name_string_id2` int(11) default NULL,
+  `edit_distance` int(11) default NULL,
+  `taxamatch_score` float default NULL,
+  `author_score` int(11) default NULL,
+  `matched` tinyint(1) default NULL,
+  `algorithmic` tinyint(1) default NULL,
+  `created_at` datetime default NULL,
+  `updated_at` datetime default NULL,
+  PRIMARY KEY  (`id`),
+  UNIQUE KEY `idx_taxamatchers_1` (`name_string_id1`,`name_string_id2`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8"
+
+db_shared.query "CREATE TABLE `taxamatch_statuses` (
+  finished_task int,
+  UNIQUE KEY `idx_finished_task_1` (`finished_task`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8"
 
 
 

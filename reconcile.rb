@@ -57,7 +57,7 @@ def reconcile(limit, db, db_shared)
       matchers.each do |id1, id2, name1, name2, edit_distance, auth_score|
         distance_score = (1 - edit_distance.to_f/((name1.size + name2.size)/2.0)) * 100
         f.write "%s\t%s\t%s\t%s\t%s\n\n" % [edit_distance, auth_score, distance_score, name1, name2]
-        query = "insert into taxamatchers (name_string_id1, name_string_id2, edit_distance, taxamatch_score, author_score, matched, algorithmic, created_at, updated_at) values (%s, %s, %s, '%s', %s, 1, 1, now(), now())" % [id1, id2, edit_distance, distance_score, auth_score]
+        query = "insert IGNORE into taxamatchers (name_string_id1, name_string_id2, edit_distance, taxamatch_score, author_score, matched, algorithmic, created_at, updated_at) values (%s, %s, %s, '%s', %s, 1, 1, now(), now())" % [id1, id2, edit_distance, distance_score, auth_score]
         db_shared.query(query)
       end
     else
