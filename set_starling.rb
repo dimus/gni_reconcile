@@ -3,8 +3,6 @@ require 'starling'
 require 'gni_matcher'
 
 s = Starling.new(Database.instance.starling_host)
-s.flush(Database::TMQUE)
-s.flush(Database::TMERR)
 db_shared = Database.instance.shared_cursor
 
 
