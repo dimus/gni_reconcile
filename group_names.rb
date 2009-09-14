@@ -6,8 +6,8 @@ require 'gni_matcher'
 class TaxaGroup
   def initialize
     @db = Database.instance.cursor
-    @lexical_groups_table = "lexical_groups_tmp"
-    @lexical_group_name_strings_table = "lexical_group_name_strings_tmp"
+    @lexical_groups_table = "lexical_groups"
+    @lexical_group_name_strings_table = "lexical_group_name_strings"
   end
 
 
@@ -37,7 +37,7 @@ class TaxaGroup
   
   def create_canonical_groups
     puts "creating groups with canonical forms"
-    name_ids = @db.query "select id, canonical_form_id from name_strings where is_canonical_form = 0 and name like 'y%' order by name"
+    name_ids = @db.query "select id, canonical_form_id from name_strings where is_canonical_form = 0 and canonical_form_id is not null and canonical_form_id != 0 order by name"
     count = 0
     @db.query "start transaction"
     name_ids.each do |id, canonical_form_id|
@@ -91,6 +91,15 @@ class TaxaGroup
   def groups_cleanup
     @db.query "delete l from lexical_groups_tmp l left join lexical_group_name_strings_tmp ln on l.id = ln.lexical_group_id where ln.id is null"
   end
+
+  def export
+    f = open('results/lexical_groups.txt', 'w')
+    res = @db.query "select l.lexical_group_id, ns.name from name_strings ns join %s l on l.name_string_id = ns.id where l.lexical_group_id is not null order by l.lexical_group_id" % @lexical_group_name_strings_table
+    res.each do |group_id, name|
+      f.write "%s\t%s\n" % [group_id, name]
+    end
+    f.close
+  end
  
  protected
 
@@ -109,8 +118,9 @@ end
 
 if $0 == __FILE__
   t = TaxaGroup.new 
-  t.set_tables
-  t.create_canonical_groups
-  t.create_taxamatch_groups
-  t.groups_cleanup
+  #t.set_tables
+  #t.create_canonical_groups
+  #t.create_taxamatch_groups
+  #t.groups_cleanup
+  t.export
 end
